@@ -1,0 +1,40 @@
+Trainer:
+  max_epochs: 5
+  accelerator: gpu
+  accumulate_grad_batches: 1
+  log_every_n_steps: 5
+  val_check_interval: 0.2
+  precision: 32
+
+loggers:
+  TensorBoardLogger:
+    save_dir: logs
+    name: sent_embedding/simcse
+  WandbLogger:
+    project: SimCSE-KR
+    name: "KR SimCSE(RoBERTa)"
+callbacks:
+  EarlyStopping:
+    monitor: corr/spearman
+    mode: max
+    min_delta: 0.00005
+    patience: 5
+    verbose: true
+  ModelCheckpoint:
+    monitor: corr/spearman
+    mode: max
+    dirpath: checkpoints
+    filename: simcse
+
+HP:
+  MODEL:
+    model: AutoModel
+    device: cuda
+    learning_rate: 0.0001
+    pretrained_model: klue/roberta-large
+    batch_size: 256
+  DATAMODULE:
+    batch_size: 256
+    num_workers: 16
+    pretrained_model: klue/roberta-large
+  
