@@ -1,10 +1,9 @@
 Trainer:
-  max_epochs: 5
+  max_epochs: 9999
   accelerator: gpu
   accumulate_grad_batches: 1
-  log_every_n_steps: 5
-  val_check_interval: 0.2
-  precision: 32
+  log_every_n_steps: 10
+  val_check_interval: 0.25
 
 loggers:
   TensorBoardLogger:
@@ -12,13 +11,13 @@ loggers:
     name: sent_embedding/simcse
   WandbLogger:
     project: SimCSE-KR
-    name: "KR SimCSE(RoBERTa)"
+    name: "KR SimCSE(RoBERTa-large) with projection mlp"
 callbacks:
   EarlyStopping:
     monitor: corr/spearman
     mode: max
     min_delta: 0.00005
-    patience: 5
+    patience: 10
     verbose: true
   ModelCheckpoint:
     monitor: corr/spearman

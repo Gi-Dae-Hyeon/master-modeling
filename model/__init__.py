@@ -3,11 +3,8 @@ Model
 Author: DaeHyeon Gi <spliter2157@gmail.com>
 """
 
-from typing import List, Dict
-
 import torch
 from torch import nn, optim
-from torch.utils.data import DataLoader
 from pytorch_lightning import LightningModule
 from torchmetrics import SpearmanCorrCoef, PearsonCorrCoef
 from transformers import AutoTokenizer
@@ -15,42 +12,36 @@ from transformers import AutoTokenizer
 from .layers import (
     SupContrastiveLoss,
     MLPLayer,
-    Encoder
+    ProjectionMLP,
+    Encoder,
 )
 
 
 class Model(LightningModule):
-    """SimCSE Model"""
-    def __init__(self, hparams: Dict) -> None:
+    """DiffCSE Model"""
+    def __init__(self, hparams: dict) -> None:
         super().__init__()
         self.hparams.update(hparams)
         self.encoder = Encoder(hparams)
         self.tokenizer = AutoTokenizer.from_pretrained(
             hparams["pretrained_model"]
         )
-        self.mlp = MLPLayer()
+        # self.mlp = MLPLayer()
+        self.mlp = ProjectionMLP()
         self.loss_fn = SupContrastiveLoss()
         self.spearman = SpearmanCorrCoef()
         self.pearson = PearsonCorrCoef()
 
-    def configure_optimizers(self) -> Dict:
+    def configure_optimizers(self) -> dict:
         """Configure optimizer and lr scheduler"""
         params = [param for param in self.encoder.parameters()] \
             + [param for param in self.mlp.parameters()]
         optimizer = optim.AdamW(params, lr=self.hparams.learning_rate)
-        sch_config = {
-            "scheduler": optim.lr_scheduler.CosineAnnealingLR(
-                optimizer, T_max=10
-            ),
-            "interval": "step"
-        }
         return {
             "optimizer": optimizer,
-            "lr_scheduler": sch_config
         }
 
-    def forward(self, texts: List[str], do_mlm: bool = False) -> torch.Tensor:
-        """Forward pass"""
+    def tokenize(self, texts: list[str]) -> dict[str, torch.Tensor]:
         tokens = self.tokenizer(
             list(texts),
             padding=True,
@@ -58,10 +49,16 @@ class Model(LightningModule):
             return_tensors="pt",
             max_length=50,
         )
-        logit = self.encoder(tokens)
-        return self.mlp(logit)
+        return tokens
 
-    def training_step(self, batch: Dict, batch_idx: int) -> Dict:
+    def forward(self, texts: list[str]) -> torch.Tensor:
+        """Forward pass"""
+        tokens = self.tokenize(texts)
+        logit = self.encoder(tokens)
+        logit = self.mlp(logit)
+        return logit
+
+    def training_step(self, batch: dict, batch_idx: int) -> dict:
         """Training Step"""
         anc, pos, neg = batch
         batch_size = len(anc)
@@ -70,12 +67,16 @@ class Model(LightningModule):
         self.log("loss/train_loss", loss, batch_size=batch_size, prog_bar=True)
         return loss
 
-    def validation_step(self, batch: Dict, batch_idx: int) -> None:
+    def validation_step(self, batch: dict, batch_idx: int) -> None:
         """Test during Training"""
         sent, hypo, label = batch
         sent, hypo = self(sent), self(hypo)
         sim = nn.functional.cosine_similarity(sent, hypo)
         self.pearson.update(preds=sim, target=label.cuda())
         self.spearman.update(preds=sim, target=label.cuda())
-        self.log("corr/spearman", self.spearman.compute(), on_epoch=True, on_step=False, prog_bar=True, sync_dist=True)
-        self.log("corr/pearson", self.pearson.compute(), on_epoch=True, on_step=False, prog_bar=True, sync_dist=True)
+
+    def on_validation_epoch_end(self) -> None:
+        self.log("corr/spearman", self.spearman.compute(),  prog_bar=True, sync_dist=True)
+        self.log("corr/pearson", self.pearson.compute(), prog_bar=True, sync_dist=True)
+        self.spearman.reset()
+        self.pearson.reset()

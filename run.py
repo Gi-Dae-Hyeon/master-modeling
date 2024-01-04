@@ -43,3 +43,4 @@ trainer = pl.Trainer(**config["Trainer"], logger=loggers, callbacks=callbacks,)
 # LET'S TRAIN!
 if __name__ == "__main__":
     trainer.fit(model=train_module, datamodule=data_module)
+    # trainer.test(model=train_module, datamodule=data_module)
