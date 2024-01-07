@@ -50,7 +50,7 @@ class Encoder(nn.Module):
         return self.encoder(**tokens).last_hidden_state[:, 0]
 
 
-class SupContrastiveLoss(nn.Module):
+class ContrastiveLoss(nn.Module):
     """Contrastive Loss"""
     def __init__(self, temp: float = .05) -> None:
         super().__init__()
@@ -63,7 +63,9 @@ class SupContrastiveLoss(nn.Module):
         ) -> Tensor:
         """Forward pass"""
         pos_sim = self.cos(anc.unsqueeze(1), pos.unsqueeze(0)) / self.temp
-        neg_sim = self.cos(anc.unsqueeze(1), neg.unsqueeze(0)) / self.temp
-        similarity = torch.cat([pos_sim, neg_sim], dim=1)
+        similarity = pos_sim
+        if neg is not None:
+            neg_sim = self.cos(anc.unsqueeze(1), neg.unsqueeze(0)) / self.temp
+            similarity = torch.cat([pos_sim, neg_sim], dim=1)
         labels = torch.arange(similarity.size(0)).long().cuda()
         return self.criterion(similarity, labels)

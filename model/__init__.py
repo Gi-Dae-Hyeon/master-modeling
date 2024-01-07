@@ -10,9 +10,8 @@ from torchmetrics import SpearmanCorrCoef, PearsonCorrCoef
 from transformers import AutoTokenizer
 
 from .layers import (
-    SupContrastiveLoss,
+    ContrastiveLoss,
     MLPLayer,
-    ProjectionMLP,
     Encoder,
 )
 
@@ -26,9 +25,8 @@ class Model(LightningModule):
         self.tokenizer = AutoTokenizer.from_pretrained(
             hparams["pretrained_model"]
         )
-        # self.mlp = MLPLayer()
-        self.mlp = ProjectionMLP()
-        self.loss_fn = SupContrastiveLoss()
+        self.mlp = MLPLayer()
+        self.loss_fn = ContrastiveLoss()
         self.spearman = SpearmanCorrCoef()
         self.pearson = PearsonCorrCoef()
 
