@@ -3,7 +3,11 @@ NLP Dataset Modules
 Author: DaeHyeon Gi <spliter2157@gmail.com>
 """
 
+import json
+from pathlib import Path
+
 import datasets
+from tqdm import tqdm
 
 
 class KorNLIDataset:
@@ -146,3 +150,29 @@ class KorSTSDataset:
             if prem is not None and hypo is not None:
                 test_dataset.append((prem, hypo, label / 5))
         return test_dataset
+
+
+class PatentPairDataset:
+    def __init__(
+        self,
+        train_pair_file: str,
+        val_pair_file: str,
+    ) -> None:
+        self.train_dataset_path = Path(train_pair_file)
+        self.val_dataset_path = Path(val_pair_file)
+
+    def train(self) -> list[tuple[str, str]]:
+        ret = []
+        with Path(self.train_dataset_path).open("r", encoding="utf-8") as fp:
+            self.train_dataset = json.load(fp)
+        for data in tqdm(self.train_dataset, desc="Loading Train Dataset"):
+            ret.append((data["query"], data["candidate"]))
+        return ret
+
+    def validation(self) -> list[tuple[str, str, float]]:
+        ret = []
+        with Path(self.val_dataset_path).open("r", encoding="utf-8") as fp:
+            self.val_dataset = json.load(fp)[:100000]
+        for data in tqdm(self.val_dataset, desc="Loading Val Dataset"):
+            ret.append((data["query"], data["candidate"], data["score"]))
+        return ret

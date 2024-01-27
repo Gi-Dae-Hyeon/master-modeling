@@ -22,8 +22,8 @@ torch.set_float32_matmul_precision("medium")
 with Path("./config.yaml").open("r", encoding="utf-8") as f:
     config = yaml.load(f, Loader=yaml.FullLoader)
 
-data_module = DataModule(hparams=config["HP"]["DATAMODULE"])
-train_module = Model(hparams=config["HP"]["MODEL"])
+data_module = DataModule(hparams=config["HP"])
+train_module = Model(hparams=config["HP"])
 
 # Set Loggers
 loggers = []

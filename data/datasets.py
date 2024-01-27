@@ -3,12 +3,12 @@ Kor NLI, STS Dataset
 
 Author: DaeHyeon Gi <spliter2157@gmail.com>
 """
+from typing import Optional
 from collections import defaultdict
-from typing import List, Tuple
 
 from torch.utils.data import Dataset
 
-from common.data import KorNLIDataset, KorSTSDataset
+from common.data import KorNLIDataset, KorSTSDataset, PatentPairDataset
 
 
 class TripletDataset(Dataset):
@@ -17,7 +17,7 @@ class TripletDataset(Dataset):
         nli_dataset = KorNLIDataset()
         self.data = self.compose_triplet(dataset=getattr(nli_dataset, phase)())
 
-    def compose_triplet(self, dataset: object) -> List[Tuple[str, str, str]]:
+    def compose_triplet(self, dataset: object) -> list[tuple[str, str, str]]:
         data_dict = defaultdict(dict)
         for idx, d in enumerate(dataset):
             if idx % 3 == 0:
@@ -30,9 +30,10 @@ class TripletDataset(Dataset):
         for anchor, hypothesis in data_dict.items():
             if "entailment" in hypothesis and "contradiction" in hypothesis:
                 triplet_data.append((anchor, hypothesis["entailment"], hypothesis["contradiction"]))
+                # triplet_data.append((anchor, hypothesis["entailment"]))
         return triplet_data
 
-    def __getitem__(self, index: int) -> Tuple[str, str, str]:
+    def __getitem__(self, index: int) -> tuple[str, str, str]:
         return self.data[index]
 
     def __len__(self) -> int:
@@ -45,7 +46,23 @@ class STSDataset(Dataset):
         self.dataset = KorSTSDataset()
         self.data = getattr(self.dataset, phase)()
 
-    def __getitem__(self, index: int) -> Tuple[str, str, float]:
+    def __getitem__(self, index: int) -> tuple[str, str, float]:
+        return self.data[index]
+
+    def __len__(self) -> int:
+        return len(self.data)
+
+
+class PatentDataset(Dataset):
+    def __init__(self, phase: str) -> None:
+        super().__init__()
+        self.dataset = PatentPairDataset(
+            train_pair_file="/data/dh/personel/train.json",
+            val_pair_file="/data/dh/personel/validation.json"
+        )
+        self.data = getattr(self.dataset, phase)()
+
+    def __getitem__(self, index: int) -> tuple[str, str, Optional[float]]:
         return self.data[index]
 
     def __len__(self) -> int:

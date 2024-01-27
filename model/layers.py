@@ -14,7 +14,7 @@ class MLPLayer(nn.Module):
     def __init__(self, dim: int = 1024) -> None:
         super().__init__()
         self.dense = nn.Linear(dim, dim)
-        self.activation = nn.Tanh()
+        self.activation = nn.Sigmoid()
 
     def forward(self, feature_vector: Tensor) -> Tensor:
         """Forward pass"""
@@ -59,8 +59,8 @@ class ContrastiveLoss(nn.Module):
         self.criterion = nn.CrossEntropyLoss()
 
     def forward(
-        self, anc: Tensor, pos: Tensor, neg: Tensor
-        ) -> Tensor:
+        self, anc: Tensor, pos: Tensor, neg: Tensor = None
+    ) -> Tensor:
         """Forward pass"""
         pos_sim = self.cos(anc.unsqueeze(1), pos.unsqueeze(0)) / self.temp
         similarity = pos_sim

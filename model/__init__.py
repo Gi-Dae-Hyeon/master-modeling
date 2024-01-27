@@ -6,7 +6,7 @@ Author: DaeHyeon Gi <spliter2157@gmail.com>
 import torch
 from torch import nn, optim
 from pytorch_lightning import LightningModule
-from torchmetrics import SpearmanCorrCoef, PearsonCorrCoef
+from torchmetrics import SpearmanCorrCoef, PearsonCorrCoef, MeanSquaredError
 from transformers import AutoTokenizer
 
 from .layers import (
@@ -29,6 +29,8 @@ class Model(LightningModule):
         self.loss_fn = ContrastiveLoss()
         self.spearman = SpearmanCorrCoef()
         self.pearson = PearsonCorrCoef()
+        self.mse_p = MeanSquaredError()
+        self.mse_n = MeanSquaredError()
 
     def configure_optimizers(self) -> dict:
         """Configure optimizer and lr scheduler"""
@@ -45,7 +47,7 @@ class Model(LightningModule):
             padding=True,
             truncation=True,
             return_tensors="pt",
-            max_length=50,
+            max_length=self.hparams["max_length"],
         )
         return tokens
 
@@ -58,10 +60,15 @@ class Model(LightningModule):
 
     def training_step(self, batch: dict, batch_idx: int) -> dict:
         """Training Step"""
-        anc, pos, neg = batch
+        if len(batch) == 2:
+            anc, pos = batch
+            anc, pos = self(anc), self(pos)
+            loss = self.loss_fn(anc=anc, pos=pos)
+        elif len(batch) == 3:
+            anc, pos, neg = batch
+            anc, pos, neg = self(anc), self(pos), self(neg)
+            loss = self.loss_fn(anc=anc, pos=pos, neg=neg)
         batch_size = len(anc)
-        anc, pos, neg = self(anc), self(pos), self(neg)
-        loss = self.loss_fn(anc=anc, pos=pos, neg=neg)
         self.log("loss/train_loss", loss, batch_size=batch_size, prog_bar=True)
         return loss
 
@@ -70,11 +77,27 @@ class Model(LightningModule):
         sent, hypo, label = batch
         sent, hypo = self(sent), self(hypo)
         sim = nn.functional.cosine_similarity(sent, hypo)
-        self.pearson.update(preds=sim, target=label.cuda())
-        self.spearman.update(preds=sim, target=label.cuda())
+        self.pearson.update(preds=sim, target=label.to(self.hparams["device"]))
+        self.spearman.update(preds=sim, target=label.to(self.hparams["device"]))
+        for si, lab in zip(sim, label):
+            if lab == 1:
+                self.mse_p.update(preds=si, target=lab.to(self.hparams["device"]))
+            else:
+                self.mse_n.update(preds=si, target=lab.to(self.hparams["device"]))
 
     def on_validation_epoch_end(self) -> None:
-        self.log("corr/spearman", self.spearman.compute(),  prog_bar=True, sync_dist=True)
-        self.log("corr/pearson", self.pearson.compute(), prog_bar=True, sync_dist=True)
+        self.log("validation/spearman", self.spearman.compute(),  prog_bar=True, sync_dist=True)
+        self.log("validation/pearson", self.pearson.compute(), prog_bar=True, sync_dist=True)
+        self.log("validation/RMSE_p", self.mse_p.compute() ** 0.5, prog_bar=False, sync_dist=True)
+        self.log("validation/RMSE_n", self.mse_n.compute() ** 0.5, prog_bar=False, sync_dist=True)
+        self.log(
+            "validation/RMSE",
+            self.mse_p.compute() ** 0.5 + self.mse_n.compute() ** 0.5,
+            prog_bar=True,
+            sync_dist=True
+        )
+
         self.spearman.reset()
         self.pearson.reset()
+        self.mse_p.reset()
+        self.mse_n.reset()

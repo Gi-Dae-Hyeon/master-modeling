@@ -8,6 +8,7 @@ from pytorch_lightning import LightningDataModule
 
 from .datasets import (
     TripletDataset,
+    PatentDataset,
     STSDataset
 )
 
@@ -21,9 +22,9 @@ class DataModule(LightningDataModule):
     def __init__(
         self,
         hparams: dict,
-        train_dataset: Dataset = TripletDataset(phase="train"),
-        val_dataset: Dataset = STSDataset(phase="test"),
-        test_dataset: Dataset = STSDataset(phase="test")) -> None:
+        train_dataset: Dataset = PatentDataset(phase="train"),
+        val_dataset: Dataset = PatentDataset(phase="validation"),
+        test_dataset: Dataset = None) -> None:
         super().__init__()
         self.hparams.update(hparams)
         self.train_dataset = train_dataset
@@ -43,16 +44,7 @@ class DataModule(LightningDataModule):
     def val_dataloader(self) -> DataLoader:
         return DataLoader(
             dataset=self.val_dataset,
-            batch_size=self.hparams["batch_size"] * 2,
-            shuffle=False,
-            drop_last=False,
-            num_workers=self.hparams["num_workers"],
-        )
-
-    def test_dataloader(self) -> DataLoader:
-        return DataLoader(
-            dataset=self.test_dataset,
-            batch_size=self.hparams["batch_size"] * 2,
+            batch_size=self.hparams["batch_size"] * 4,
             shuffle=False,
             drop_last=False,
             num_workers=self.hparams["num_workers"],

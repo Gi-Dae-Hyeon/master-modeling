@@ -1,39 +1,36 @@
 Trainer:
-  max_epochs: 9999
+  max_epochs: -1
   accelerator: gpu
-  accumulate_grad_batches: 1
+  accumulate_grad_batches: 2
   log_every_n_steps: 10
-  val_check_interval: 0.25
+  val_check_interval: 0.05
+  precision: 32
 
 loggers:
-  TensorBoardLogger:
-    save_dir: logs
-    name: sent_embedding/simcse
   WandbLogger:
-    project: SimCSE-KR
-    name: "KR SimCSE(RoBERTa-large) with projection mlp"
+    project: MASTER
+    name: "bert_for_patents.baseline"
+
 callbacks:
   EarlyStopping:
-    monitor: corr/spearman
+    monitor: validation/pearson
     mode: max
-    min_delta: 0.00005
+    min_delta: 0.001
     patience: 10
     verbose: true
   ModelCheckpoint:
-    monitor: corr/spearman
+    monitor: validation/pearson
     mode: max
     dirpath: checkpoints
-    filename: simcse
+    filename: bert_for_patents.baseline
 
 HP:
-  MODEL:
-    model: AutoModel
-    device: cuda
-    learning_rate: 0.0001
-    pretrained_model: klue/roberta-large
-    batch_size: 256
-  DATAMODULE:
-    batch_size: 256
-    num_workers: 16
-    pretrained_model: klue/roberta-large
+  device: cuda
+  model: AutoModel
+  pretrained_model: anferico/bert-for-patents
+  learning_rate: 0.00001
+  batch_size: 52
+  num_workers: 16
+  max_length: 256
+  pretrained_model: anferico/bert-for-patents
   
