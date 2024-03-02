@@ -7,6 +7,7 @@ from typing import Optional
 from collections import defaultdict
 
 from torch.utils.data import Dataset
+from transformers import BertTokenizer
 
 from common.data import KorNLIDataset, KorSTSDataset, PatentPairDataset
 

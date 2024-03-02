@@ -22,13 +22,19 @@ class DataModule(LightningDataModule):
     def __init__(
         self,
         hparams: dict,
-        train_dataset: Dataset = PatentDataset(phase="train"),
-        val_dataset: Dataset = PatentDataset(phase="validation"),
+        train_dataset: Dataset = None,
+        val_dataset: Dataset = None,
         test_dataset: Dataset = None) -> None:
         super().__init__()
         self.hparams.update(hparams)
-        self.train_dataset = train_dataset
-        self.val_dataset = val_dataset
+        if train_dataset is None:
+            self.train_dataset = PatentDataset(
+                phase="train"
+            )
+        if val_dataset is None:
+            self.val_dataset = PatentDataset(
+                phase="validation"
+            )
         self.test_dataset = test_dataset
 
     def train_dataloader(self) -> DataLoader:

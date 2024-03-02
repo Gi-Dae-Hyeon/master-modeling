@@ -1,36 +1,36 @@
 Trainer:
-  max_epochs: -1
+  max_epochs: 5
   accelerator: gpu
   accumulate_grad_batches: 2
   log_every_n_steps: 10
   val_check_interval: 0.05
-  precision: 32
+  precision: bf16-mixed
 
 loggers:
   WandbLogger:
     project: MASTER
-    name: "bert_for_patents.baseline"
+    name: "bert_for_patents.test_1"
 
 callbacks:
-  EarlyStopping:
-    monitor: validation/pearson
-    mode: max
-    min_delta: 0.001
-    patience: 10
-    verbose: true
   ModelCheckpoint:
-    monitor: validation/pearson
+    monitor: validation/RMSE_p
     mode: max
     dirpath: checkpoints
-    filename: bert_for_patents.baseline
+    filename: bert_for_patents.test_1
+  RichProgressBar:
+    leave: true
 
 HP:
   device: cuda
   model: AutoModel
   pretrained_model: anferico/bert-for-patents
   learning_rate: 0.00001
-  batch_size: 52
+  batch_size: 42
   num_workers: 16
-  max_length: 256
-  pretrained_model: anferico/bert-for-patents
-  
+  max_length: 384
+  hardness_annealing:
+    apply: true
+    mode: min
+    min_delta: 0.001
+    patience: 10
+    verbose: true

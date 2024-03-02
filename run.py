@@ -37,10 +37,13 @@ for key, kwargs in config["callbacks"].items():
     callbacks.append(getattr(pl.callbacks, key)(**kwargs))
 
 # Set Trainer
-trainer = pl.Trainer(**config["Trainer"], logger=loggers, callbacks=callbacks,)
+trainer = pl.Trainer(
+    **config["Trainer"],
+    logger=loggers,
+    callbacks=callbacks,
+)
 
 
 # LET'S TRAIN!
 if __name__ == "__main__":
     trainer.fit(model=train_module, datamodule=data_module)
-    # trainer.test(model=train_module, datamodule=data_module)
